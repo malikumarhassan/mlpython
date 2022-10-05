@@ -1,0 +1,641 @@
+---
+title: "Milesstone 3"
+author: "Abdulrahman , Ahmed Fahad, Ahmad Al Marri, Khalid , Malik Umar, Marwan"
+date: "\today"
+output:
+  pdf_document: null
+  toc: yes
+  toc_depth: 2
+  latex_engine: xelatex
+  word_document: default
+header-includes: \usepackage{booktabs}
+---
+\newpage
+
+# The Manifesto
+
+Modeling 	- Marwan & Malik discussed with Ahmad/Ahmad and Abdulrahman, & Khaled (Everyone as we contribute 9 hours zoom meeting).
+
+Analytics 	-Marwan & Malik discussed with Ahmad/Ahmad and Abdulrahman & Khaled (Everyone as we contribute 6 hours zoom meeting).
+
+Findings  	-Ahmad,Ahmad & Khaled, Abdulrahman discussed with Marwan & Malik (Everyone as we contribute 5 hours zoom meeting).
+
+Research		-Ahmad & Ahmad & Khaled, Abdulrahman discussed with Marwan & Malik Everyone as we contribute 10 hours zoom meeting).
+
+Milestone 2 	 - Everyone contributed equally. 
+
+
+# Highlight of the problem & the frame
+
+The data size is at 1.07 GB-1.23 GB (before & after) with +50 million in length & eight features in width, the  .csv files of 2020-2022 has features such as the rate category, consumption unit, billing portions, the community number, the period, contract number, business numbers, the month based calendar and finally the business partner additional data set as extra to observe the events alongside the consumption rate includes additional Covid-19 data set of the world however the only three features to be considered is the country, date and the new cases. Furthermore, an LME frame with trend of aluminum prices (two features: Date, Dollars) (reference to DEWA first largest consumer EGA, after DEWA itself) (the other two sets for Millstone 3 is we can use it after the full perfection).
+
+we have planned to apply a machine learning algorithm to predict the future demand of energy & to analyze the difference between the normal time and the event based time to extract the knowledge from the set, and to solve the mystery behind the abnormal and correlated trends whether they are favorable or not, the problem is that the current prediction model of DEWA isn’t actually working due to wrong entries since the model depends on the filter data rather than the raw one.
+
+
+
+# Methodology
+
+According to my previous possible questions and outcomes of Milestone 1, it is planned to carry out a different type of forecast models, and we’ve inserted a seasonal naïve method since it doesn’t take much time to construct & run the algorithm and it can forecast based on the previous outcomes without interfering much with the factors and it follows the formula of T + h, Additionally it’s a good approach for time series seasonal based data frame, it is somewhat similar to what is used in python known is the fancy impute from lubridate & fpp2 The second was the ETS forecast which is the exponential smoothing from the name and the look of the outcome it is similar the excel exponential forecast macros pack (By Macros), it depends a lot on the timeline, and it is a good one for consumer-based trends and continuous data in addition to unchanged cycles between the different locations of the data. The third being the ARIMA, which will be the selected candidate which we will conclude later why, it is known as the Auto regressive integrated moving average of which is a time series model that is used in statistics and econometrics to assess events that occur over time. It forecasts the observation based on historical data of earlier time spots recorded for the same observation. The model is employed to comprehend historical data and forecast subsequent data in a series, and it is useful to forecast the future demands of energy. Our selected Algorithm were all supervised based ML , due to the existence of time series based data and the presence of labelled input and outputs in addition they are linear based as the correlation matrix “heatmap style” (after the cut of 2020) illustrates that the correlation is present & clear between the attributes of the data with the addition of the data-frame which are the  and the  set thereby it usually shows a normal line without jumps/drops since it’s not an gas turbine comparison but rather the whole thing in the comparison. Note that LSTM would be used in the Milestone 3
+ Now going back on why exactly we’ve chosen the ARIMA well as you can see in the outputs the p values are less and the standard deviation residual is also less therefore in the graph below based on the basis of the F-statistics we will implement the ARIMA, as you can see the disadvantages of the seasonal is that it took the min peak to the highest amounts based on one year of 2020 which makes the model bias, and same it goes for the ETS it is closer to the actual outputs as indicated by the graph however we will still go with ARIMA due to the better %'s of the output and the higher favorable outputs , in the next milestone a high chance to conduct the LSTM as a fourth model and possibility of utilizing a hybrid models, more to added the Datasets of other frame will be inserted for further investigation, 
+
+
+
+\newpage
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Initialization
+
+This section we are going to include all R library which included in this project.
+
+```{r PackagesInitialization, message=TRUE, warning=FALSE , echo=FALSE}
+if(!require('tidyverse'))
+{
+  install.packages("tidyverse", dependencies = TRUE)
+  library(tidyverse)
+}
+
+if(!require('data.table'))
+{
+  install.packages("data.table", dependencies = TRUE)
+  library(data.table)
+}
+
+if (!require('xtable')) {
+install.packages("xtable",dependencies=TRUE)
+library(xtable)
+}
+
+if(!require('lubridate'))
+{
+  install.packages("lubridate", dependencies = TRUE)
+  library(lubridate)
+}
+
+# if (!require('DataExplorer')) {
+# install.packages("DataExplorer",dependencies=TRUE)
+# library(DataExplorer)
+# }
+
+if (!require('tidyverse')) {
+install.packages("tidyverse",dependencies=TRUE)
+library(tidyverse)
+}
+
+
+
+if (!require('viridis')) {
+install.packages("viridis",dependencies=TRUE)
+library(viridis)
+}
+
+if (!require('ggplot2')) {
+install.packages("ggplot2",dependencies=TRUE)
+library(ggplot2)
+}
+
+if (!require('extrafont')) {
+install.packages("extrafont",dependencies=TRUE)
+library(extrafont)
+}
+ 
+
+if (!require('plyr')) {
+install.packages("plyr",dependencies=TRUE)
+library(plyr)
+}
+
+if (!require('magrittr')) {
+install.packages("magrittr",dependencies=TRUE)
+library(magrittr)
+}
+
+
+if (!require('dplyr')) {
+install.packages("dplyr",dependencies=TRUE)
+library(dplyr)
+}
+
+
+
+
+
+
+if (!require('ggcorrplot')) {
+install.packages("ggcorrplot",dependencies=TRUE)
+library(ggcorrplot)
+}
+
+if (!require('corrplot')) {
+install.packages("corrplot",dependencies=TRUE)
+library(corrplot)
+}
+
+if (!require('fpp2')) {
+install.packages("fpp2",dependencies=TRUE)
+library(fpp2)
+}
+```
+
+
+
+\newpage
+# Data Set
+## Loading DEWA Dataset
+
+```{r dewadataset, message=TRUE, warning=FALSE , echo=FALSE }
+dataset_dewa<-fread("dewadataset.csv")
+dataset_dewa <- dataset_dewa[sample(nrow(dataset_dewa), 10000),2:9 ] 
+dataset_dewa <- filter(dataset_dewa, dataset_dewa$consumption_unit >= 0, dataset_dewa$billing_portion != '', dataset_dewa$rate_category != '', dataset_dewa$billing_portion != '')
+
+dataset_dewa_corr <- dataset_dewa
+#rownames(dataset_dewa) <- dataset_dewa$consumption_period
+```
+
+## Variable Names Dataset
+
+```{r variableofdewadataset, message=TRUE, warning=FALSE , echo=FALSE}
+colnames(dataset_dewa) 
+```
+## Summary Of Dataset
+
+```{r VariableDataTypes, message=TRUE, warning=FALSE , echo=FALSE}
+summary(dataset_dewa)
+
+```
+```{r DatasetStructure,message=TRUE, warning=FALSE , echo=FALSE}
+str(dataset_dewa)
+
+```
+
+```{r  DatasetStructure01, message=TRUE, warning=FALSE , echo=FALSE}
+head(dataset_dewa)
+
+```
+
+```{r DatasetStructure02,message=TRUE, warning=FALSE , echo=FALSE}
+tail(dataset_dewa)
+
+```
+
+
+
+```{r DatasetStructure4 ,message=TRUE, warning=FALSE , echo=FALSE }
+dim(dataset_dewa)
+```
+
+
+## Data Explorer
+
+```{r DataExplorer, message=TRUE, warning=FALSE , echo=FALSE}
+DataExplorer::plot_missing(dataset_dewa)
+```
+
+## Removed NA 
+
+```{r RemoveNA, message=TRUE, warning=FALSE , echo=FALSE}
+dataset_dewa <- na.omit(dataset_dewa)
+dataset_dewa_corr <- na.omit(dataset_dewa)
+```
+
+## Data Explorer After Removing NA
+
+```{r RemovedNA01, message=TRUE, warning=FALSE , echo=FALSE}
+
+DataExplorer::plot_missing(dataset_dewa)
+
+```
+
+# ETL 
+
+## Transformation
+
+You can also embed plots, for example:
+
+```{r headofdataset01 ,message=TRUE, warning=FALSE , echo=FALSE}
+
+dataset_dewa$consumption_period <- as.Date(dataset_dewa$consumption_period, format="%d.%m.%Y")
+
+dataset_dewa$consumption_year_name <- as.factor(format(dataset_dewa$consumption_period, format = "%Y"))
+
+dataset_dewa$consumption_month_name <- months(as.Date(dataset_dewa$consumption_period))
+
+dataset_dewa$consumption_day_name <- weekdays(as.Date(dataset_dewa$consumption_period))
+
+
+dataset_dewa$consumption_unit_megawatt <- as.numeric(dataset_dewa$consumption_unit/1000)
+
+
+```
+
+\newpage
+
+# Descriptive Analytics
+
+Note
+COMMELEC: is the commercial.
+RESIEXPE: is a combined complex with residential and commercial examples being the 
+RESINATE: is tower based residential building, basically a skyscraper that have studio or residential rooms.
+FREENRESIE: is multi-residential area like Emaar community or DAMAC Akoya as Empower, and DEWA are the provider, which a townhouse style.
+RESINATSE: is the semi resident basically a villa style house community not Emaar or DAMAC which is two or four houses attached together
+GOVTELEC: is the government.
+INDTELEC: is the industrial.
+
+
+## Correlation Analysis
+
+```{r CorrelationAnalysis01, message=TRUE, warning=FALSE , echo=FALSE}
+
+
+ factr_biilingportion <- as.factor(dataset_dewa$billing_portion)
+ intr_biilingportion <- as.numeric(factr_biilingportion)
+
+
+ factr_community <- as.factor(dataset_dewa$community)
+ intr_community <- as.numeric(factr_community)
+
+  factr_rate_category <- as.factor(dataset_dewa$rate_category)
+ intr_rate_category <- as.numeric(factr_rate_category)
+
+ factr_consumption_period <- as.factor(dataset_dewa$consumption_period)
+ intr_consumption_period <- as.numeric(factr_consumption_period)
+
+  factr_calendar_month <- as.factor(dataset_dewa$calendar_month)
+ intr_calendar_month <- as.numeric(factr_calendar_month)
+
+   factr_contract_account <- as.factor(dataset_dewa$contract_account)
+ intr_contract_account <- as.numeric(factr_contract_account)
+
+
+   factr_business_partner <- as.factor(dataset_dewa$business_partner)
+ intr_business_partner <- as.numeric(factr_business_partner)
+
+  factr_consumption_unit <- as.factor(dataset_dewa$consumption_unit)
+ intr_factr_consumption_unit <- as.numeric(factr_consumption_unit)
+
+
+ 
+ dataset_dewa_corr<- dataset_dewa_corr%>%
+select(billing_portion,community,rate_category,consumption_period,calendar_month,contract_account,business_partner,consumption_unit)
+ 
+ dataset_dewa_corr$billing_portion <- intr_biilingportion
+ dataset_dewa_corr$community <- intr_community
+ dataset_dewa_corr$rate_category <- intr_rate_category
+ dataset_dewa_corr$consumption_period <- intr_consumption_period
+ dataset_dewa_corr$calendar_month <- intr_calendar_month
+  dataset_dewa_corr$contract_account <- intr_contract_account
+  dataset_dewa_corr$business_partner <- intr_business_partner
+  dataset_dewa_corr$consumption_unit <- intr_factr_consumption_unit
+
+
+library(corrplot)
+M = cor(dataset_dewa_corr)
+corrplot(M, method = 'number') # colorful number
+
+```
+## Findings
+
+As it is being observed that there is a stong correlation between the Consumption unit and the calendar of the month, thereby it was also found the consumption unit and the calennder of the month in addition the business partner and the contract number (account), thereby it was also found that the community and the contract number have some kind of relation.
+
+
+
+## Outliers Detection
+
+```{r BoxPlotratecateandconsumptio01 , message=TRUE, warning=FALSE , echo=FALSE}
+
+BoxPlotratecateandconsumptionunit <- ggplot(dataset_dewa, aes(x=dataset_dewa$rate_category, y=dataset_dewa$consumption_unit_megawatt, color=dataset_dewa$rate_category)) + 
+  geom_boxplot()+ 
+  coord_flip()+  
+  labs(title = "Outliers detection between rate(customer) category & consumption unit", x = "Customer Category", y = "Consumption Unit (megawatt hours)",caption = "Based on Dewa Dubai Pulse Data")
+BoxPlotratecateandconsumptionunit + geom_jitter(shape=16, position=position_jitter(0.2))
+
+```
+## Findings 
+•	As the visual plot indicates that there not many outliers within all kinds of residential category whom are considered the first TWO categories: RESINATSE at 1800MW fully on DEWA and FREENRESIE at 800-900 MW due to different supplier dependence such as Empower, TAQA however the commercial 16750MW based consumers does have more outliers are it is known that usually the commercial consumers such as stores, plaza’s, etc are known to operate true power from the daytime till midnight and usually the power generation are on lower voltage adder during the night time as the demand is less, the turbines are known to operation at rpms, thereby the power cost per night, similarly the one government facility 2700MW which is known as Dubai police & the UAE Armed force, as they are operational at 24/7, also what’s interesting is the RESIEXPE which is the residential combined complex with stores 6800 MW, etc, an example of that would be festival city since it does have similar consumption to the commercial complex since it works in a similar way, same it goes with the Tower based residential complex 4000 MW since they act in similar way since most towers do have studio, workstations in addition to residential apartments with stores, however the industrial surprisingly emerged with 1400 MW meaning it’s little less then expected a new knowledge gained as it seems for the 3 years period due to 2020 effect the production were in the lower side thereby it is was also known that these giant tend to have some support internally through in-house generation 
+•	It is seen that 2021 has most of the outlier due to high change in the events which would be discussed even more in milestone 3, already I know that cause based on the python segregation the Industrial had a boom on that period near the end of 2021.
+
+
+
+## Boxplot Consumption
+
+```{r consumptionboxplotbyyear01 , message=TRUE, warning=FALSE, echo=FALSE}
+
+
+BoxPlotratecateandconsumptionunit <- ggplot(dataset_dewa, aes(x=dataset_dewa$consumption_year_name, y=dataset_dewa$consumption_unit_megawatt, color=dataset_dewa$consumption_year_name)) + 
+  geom_boxplot()+ 
+  coord_flip()+  
+  labs(title = "Outliers detection between Year & consumption unit", x = "Year", y = "Consumption Unit (megawatt hours)",caption = "Based on Dewa Dubai Pulse Data")
+BoxPlotratecateandconsumptionunit + geom_jitter(shape=16, position=position_jitter(0.2))
+
+```
+## Findings
+
+•	The consumption graph illustrates that during mid-end of 2020 the electrical power consumption was much less then that of 2021, 2022 
+•	It is known that DEWA were installing new metering unit for the transformers which were from Tokia, Areva and Alstom smart meter as according to Mr Al Tayer said that “The new grid covers the generation, transmission, and distribution systems with investments of up to AED 7 billion that will be completed in the short, medium, and long-term until 2035”.
+•	2021 consumption rate was the highest among the rest, near end of 2021 we can observe that tremendous jump in the consumption levels were due to high increase within the industrial sector specially one of the largest power consumers of Dubai such as EGA, DP World. Additionally, the global aluminum price was on continuous raise, in addition to a good reduction in Covid-19 cases and the return of the demand in the commercial sector specially the community-based market & other workplaces which are considered part of the commercial.
+
+
+## Highest consumption Customer Category
+
+```{r HighestCustomerCategory, message=TRUE, warning=FALSE , echo=FALSE}
+
+dataset_dewa_custcate <- aggregate(dataset_dewa$consumption_unit_megawatt, by=list(rate_category=dataset_dewa$rate_category), FUN=sum)
+
+dataset_dewa_custcate$rate_category<-factor(dataset_dewa_custcate$rate_category,  levels=dataset_dewa_custcate$rate_category[order(dataset_dewa_custcate$x)])
+
+p<-ggplot(dataset_dewa_custcate,aes(x=dataset_dewa_custcate$rate_category,y=x) ) + geom_bar(stat="identity", color=dataset_dewa_custcate$rate_category) +
+   coord_flip() +  
+  labs(title = "Highest  Consumption Customer Category", x = "Customer Category", y = "Consumption Unit (megawatt hours)",caption = "Based on Dewa Dubai Pulse Data")
+p
+
+```
+## Findings
+
+•	As the visual plot indicates that there not many outliers within all kinds of residential category whom are considered the first TWO categories: RESINATSE at 1800MW fully on DEWA and FREENRESIE at 800-900 MW due to different supplier dependence such as Empower, TAQA however the commercial 16750MW based consumers does have more outliers are it is known that usually the commercial consumers such as stores, plaza’s, etc are known to operate true power from the daytime till midnight and usually the power generation are on lower voltage adder during the night time as the demand is less, the turbines are known to operation at rpms, thereby the power cost per night, similarly the one government facility 2700MW which is known as Dubai police & the UAE Armed force, as they are operational at 24/7, also what’s interesting is the RESIEXPE which is the residential combined complex with stores 6800 MW, etc, an example of that would be festival city since it does have similar consumption to the commercial complex since it works in a similar way, same it goes with the Tower based residential complex 4000 MW since they act in similar way since most towers do have studio, workstations in addition to residential apartments with stores, however the industrial surprisingly emerged with 1400 MW meaning it’s little less then expected a new knowledge gained as it seems for the 3 years period due to 2020 effect the production were in the lower side thereby it is was also known that these giant tend to have some support internally through in-house generation 
+•	It is seen that 2021 has most of the outlier due to high change in the events which would be discussed even more in milestone 3, already I know that cause based on the r segregation the Industrial had a boom on that period near the end of 2021.
+
+
+## Highest  Consumption Billing Portion
+
+```{r HighestConsuptionBillingPortion, message=TRUE, warning=FALSE,echo=FALSE }
+
+
+dataset_dewa_billportion <- aggregate(dataset_dewa$consumption_unit_megawatt, by=list(billing_portion =dataset_dewa$billing_portion), FUN=sum) 
+
+dataset_dewa_billportion <- filter(dataset_dewa_billportion, dataset_dewa_billportion$billing_portion != 0 && !is.na(dataset_dewa_billportion$billing_portion))
+
+
+ggplot(dataset_dewa_billportion, aes(x = reorder(billing_portion,x),y = x,color = billing_portion,fill = x)) + geom_point()+
+geom_segment(aes(x=billing_portion,xend=billing_portion, y=0, yend=x))+
+scale_fill_gradient(low = "green", high = "red") +
+scale_y_continuous(labels=function(x) x/1000) +
+xlab('Complaint Category') + theme(text = element_text(size=10),
+axis.text.x = element_text(angle=0, hjust=1)) + coord_flip() + 
+labs(title = "Highest  Consumption Billing Portion", x = "Billing Portion", y = "Consumption Unit (megawatt hours)",caption = "Based on Dewa Dubai Pulse Data")
+
+```
+## Findings
+•	931 at 4400MW, D31 standing at 2300MW and finally B34 at 2150MW as the billing remains anonymous, this is just for further information, note: since I already know that 931 is DXB airport in Al-Twar 3 region, which seems reasonable since DXB is a commercial and operating at 24/7.
+
+
+\newpage
+
+# Time Series Analysis
+
+## By Day
+
+```{r TrendbyDay, message=TRUE, warning=FALSE, echo=FALSE }
+
+daytrendPlot <- ggplot(dataset_dewa, aes(x=dataset_dewa$consumption_day_name, y=dataset_dewa$consumption_unit_megawatt)) +
+  # geom_line(color = "Blue", size = 1) + 
+   geom_bar(stat='identity', aes(fill=dataset_dewa$consumption_day_name), width=.5)  +
+  coord_flip() +  
+  theme_bw() + labs(title = "Consumption Variation By Day", x = "Days", y = "Consumption Unit (megawatt hours)",caption = "Based on Dewa Dubai Pulse Data")
+daytrendPlot
+
+```
+
+## Findings
+
+•	It shows that the near start day of the week Tuesday 6200MW which has the highest consumption well that’s for all the three years combined however let’s take into the account the change of the weekends that has occurred in 2022 which changed the holidays from Friday-Sat to Sat-Sun, so it’s considered as mid working of the week is the busiest and most electrical power consumed time, the second highest goes to Wednesday 5350MW again since this is a three years data the change would occur there by again it is the mid work day of the week, meanwhile Sun 5200MW which was considered as the first day of the week holds the third highest consumption period as it is.
+
+
+## By Month
+
+```{r TrendByMonth, message=TRUE, warning=FALSE, echo=FALSE }
+
+time_trendPlotMonth <- ggplot(dataset_dewa, aes(x=dataset_dewa$consumption_month_name, y=dataset_dewa$consumption_unit_megawatt)) +
+   geom_bar(stat="identity", width=.5, fill="tomato3") +
+  coord_flip()  +
+  theme(axis.text.x = element_text(angle=65, vjust=0.6)) + labs(title = "Consumption Variation By Month", x = "Months", y = "Consumption Unit (megawatt hours)",caption = "Based on Dewa Dubai Pulse Data")
+time_trendPlotMonth
+
+```
+## Findings
+
+•	It is clear that May 4200MW, Feb 3300MW and Oct with Sep (3199-3250MW) are the largest time of the consumption period for 3 year data, since what the graph does is that it add the months all together of all the three years, May was the largest since it seems that usually on this time in addition to the beginning of the summer is considered to start on 3-5 (Mar-May) months of year, moreover similar to march data since again the beginning of the summer takes place during that period in addition to but expect that usually people tend to stay within the country rather then travel abroad, since it is known that the majority of the travels takes place during the mid-summer time 5-8 (Mar-Jul)  months of year.
+
+
+## By Year
+
+```{r TrendByYear, message=TRUE, warning=FALSE, echo=FALSE}
+time_trendPlotYear <- ggplot(dataset_dewa, aes(x=dataset_dewa$consumption_year_name, y=dataset_dewa$consumption_unit_megawatt)) +
+  geom_bar(stat="identity", fill=dataset_dewa$consumption_year_name) +
+  xlab("")+ 
+  theme_bw() + labs(title = "Consumption Variation By Year", x = "Years", y = "Consumption Unit (megawatt hours)",caption = "Based on Dewa Dubai Pulse Data")
+time_trendPlotYear
+
+```
+## Findings
+
+•	2021 tops all and second is 2022 meanwhile 2020 remains as the last for sensor change reasons as mentioned in the Consumption Variation by Consumption Period.
+
+## By Consumption Period
+```{r TrendByConsumptionPeriod01, message=TRUE, warning=FALSE, echo=FALSE}
+
+time_trendPlotPeriod <- ggplot(dataset_dewa, aes(x=dataset_dewa$consumption_period, y=dataset_dewa$consumption_unit_megawatt)) +
+  geom_line() + 
+  xlab("")+ 
+  theme_bw() + labs(title = "Consumption Variation By Consumtion Period", x = "Years", y = "Consumption Unit (megawatt hours)",caption = "Based on Dewa Dubai Pulse Data")
+time_trendPlotPeriod
+
+```
+## Findings
+
+•	The consumption graph illustrates that during mid-end of 2020 the electrical power consumption was much less then that of 2021, 2022 
+•	It is known that DEWA were installing new metering unit for the transformers which were from Tokia, Areva and Alstom smart meter as according to Mr Al Tayer said that “The new grid covers the generation, transmission, and distribution systems with investments of up to AED 7 billion that will be completed in the short, medium, and long-term until 2035”.
+•	2021 consumption rate was the highest among the rest, near end of 2021 we can observe that tremendous jump in the consumption levels were due to high increase within the industrial sector specially one of the largest power consumers of Dubai such as EGA, DP World. Additionally, the global aluminum price was on continuous raise, in addition to a good reduction in Covid-19 cases and the return of the demand in the commercial sector specially the community-based market & other workplaces which are considered part of the commercial.
+
+## Seasonal Plot
+
+```{r fpp2Timeserires, message=TRUE,  warning=FALSE, echo=FALSE}
+dataset_dewa_ts<- dataset_dewa%>%
+select(consumption_period,consumption_unit_megawatt)
+
+
+dataset_dewa_ts <- aggregate(dataset_dewa$consumption_unit_megawatt, by=list(consumption_period=dataset_dewa$consumption_period), FUN=sum)
+
+
+Y <- ts(dataset_dewa_ts[,2],start = c(2020,1), frequency = 12)
+DF <- diff(Y)
+ggseasonplot(DF, col=rainbow(12), continuous=TRUE, main = "Seasonality Plot : Consumption Variation By Month" , ylab = "Consumption unit (megawatt hours)",caption = "Based on Dewa Dubai Pulse Data")  
+```
+```{r pp2Timeseriressub, message=TRUE, warning=FALSE, echo=FALSE}
+ggsubseriesplot(DF, col=rainbow(12), continuous=TRUE, main = "Sub Seasonality Plot : Consumption Variation By Month" , ylab = "Consumption unit (megawatt hours)",caption = "Based on Dewa Dubai Pulse Data")
+```
+
+\newpage
+
+# Predictive Analytics
+
+## Time Series Prediction
+
+### Bench Mark
+
+
+```{r residualplots, message=TRUE,  warning=FALSE, echo=FALSE}
+fit<- snaive(DF)
+```
+
+
+
+```{r residualplotssummary, message=TRUE, warning=FALSE, echo=FALSE}
+print(summary(fit))
+```
+
+
+```{r residualplotslist,  message=TRUE, warning=FALSE, echo=FALSE}
+checkresiduals(fit)
+```
+
+### ETS
+
+
+
+```{r etsresidualplotssummary,  message=TRUE, warning=FALSE, echo=FALSE}
+
+fit_ets <- ets(Y)
+
+print(summary(fit_ets))
+
+```
+```{r forcastmodelnaive ,  message=TRUE, warning=FALSE, echo=FALSE}
+fcst <- forecast(fit, h = 24) #h = 24 months
+autoplot(fcst, include = 60) #60 = months
+print(summary(fcst))
+```
+
+```{r etsresidualplotresidual, message=TRUE, warning=FALSE, echo=FALSE}
+checkresiduals(fit_ets)
+```
+```{r forcastmodelets , message=TRUE, warning=FALSE, echo=FALSE}
+
+fcst <- forecast(fit_ets, h = 24) #h = 24 months
+autoplot(fcst, include = 60) #60 = months
+print(summary(fcst))
+
+```
+
+### ARIMA Model
+
+```{r arimaresidualplotsummary, message=TRUE, warning=FALSE, echo=FALSE}
+
+
+fit_arima <- auto.arima(Y, d=1, D=1 , stepwise = FALSE, approximation = FALSE, trace = TRUE)
+
+print(summary(fit_arima))
+
+```
+
+```{r arimaresidualplotresidual,message=TRUE, warning=FALSE, echo=FALSE}
+checkresiduals(fit_arima)
+
+```
+
+```{r forcastmodearima ,  message=TRUE, warning=FALSE, echo=FALSE}
+fcst <- forecast(fit_arima, h = 24) #h = 24 months
+autoplot(fcst, include = 60) #60 = months
+
+```
+```{r forcastmodearima01 ,  message=TRUE, warning=FALSE, echo=FALSE}
+print(summary(fcst))
+```
+
+
+## Findings
+
+In this predictive analysis we selected three algorithm to predict the DEWA energy consumption. snaive, ets and ARIMA. To finding goodness of fit or accuracy for all these time series algorithm we have a concept of auto correlation plot, lags and residual plots.
+
+Autocorrelation plot gives an idea how data trends are best fit time series model, where "lags" within the plot describes the stationary and un stationary data points. as per above observation we can conclude that "ARIMA" model have 99% best fit the time series data all the data points are in between the regression lines.
+
+
+Further more residual plot also way where we can how the model is best fitted in model, but in our case there is each model have almost similar residual plot, from above plot we can find that frequency & density  of residual are almost zero. means error between regression line and training data is  fitted well.
+
+Other factors AIC (Akaike's Information Criteria) and BIC means (Bayesian Information Criteria), lowest AIC and BIC values of ARIMA model interpret that selection of ARIMA is best of our time series data.
+
+snaive model only consider previous value to predict , seasonality and multivariate is in appropriate with snaive so one of the major reason of rejecting snaive is limitations.
+
+ets method random variation can not handle very well, seasonality and cyclic behavior of data is major but ets can not handle trends very well thats impact on the accuracy of non stationary data.
+
+At the end we have ARIMA model that is AR (Auto regression ) I (Integrator) MA (Moving Average), which deals all the trends and seasonality in the data, also  
+mutlivariate can handle very accurately in ARIMA models.
+
+
+In our study, we tried multiple variable  ARIMA to check the variation in AIC & BIC value. Following are the test for the ARIMA model.
+
+1. Test 1
+Porovide the whole data set.
+
+AIC=7502.52   AICc=5409.89   BIC=5623.89
+
+2. Test 2
+
+Removed billing portion &  contract account
+
+AIC=6109.39   AICc=5409.63   BIC=5832.77
+
+3. Test 3
+
+Community, Rate Category and business partner. 
+
+AIC=5109.39   AICc=5109.63   BIC=5132.77
+
+AIC=5109.39   AICc=5109.63   BIC=5132.77 result is best of out of other two.
+
+\newpage
+
+## Solutions Of Questions  
+
+The relationship between the consumption unit and period is a low-medium correlation however when adding all the three years data, as the correlation is standing at 0.29 %, of course it doesn’t seems like a tremendous relation however when taken the data of 2020 out from the combined set, then definitely the correlation will increase to 0.33 %, overall there is a correlation but it really depends on the event more rather then the period itself as the period of the year doesn’t behave the same on yearly bases, the only natural cause of the change is the weather change (summer & winter), which is an indication that the events matter more and would increase the correlation if suppose let’s say an reoccurring man made event is happening routinely.
+the rate category is affecting the consumption negatively if taking all the three year together, in addition due to higher variance within the category for such as community-wise of 347 in comparison to a another community but with the same category rate, in this example both were commercial, the variance between the two is very high even when taking only the high consumers of the commercial industry, even if the years were removed, the consumption unit and the variant of the consumer seems to be unrelated, thus it is recommended for DEWA to introduce a new procedure to classify the category rate rather then generalizing, it is better the breakup the category in sub-parts, additionally there is a clear difference when breaking them into parts.
+the predictor models that were produced seem to be relatively close in-terms of ETS and ARIMA meanwhile the seasonal naïve has a huge difference even when perfecting and fining the tune, ETS and ARIMA becomes even closer together then they were.
+the largest consumers within the area were the 500 series of the community, 500 means Jebel Ali as a whole, the largest among them were 531 industrial, 516 commercial, 594 commercial, 500 industrial and lastly the 599 industrial since Jebel Ali is a known destination for warehouses of goods, plants and factories, however in terms of pure power consumer would be the government facility of 915 which is Empower distribution center as they are the ones whom take and transformer, connect different bus bars to the suppliers.
+
+
+\newpage
+
+## Literature Review
+
+It has been demonstrated that certain conventional statistical models have strong energy intake forecasting capabilities and have been widely employed in quasi-time period prediction issues. Besides that, the most recent methodologies, such as the "Autoregressive Integrated Moving Average Model" or ARIMA, the "Autoregressive Moving Average Model" or ARMA, as well as linear regression, are the main topics of this literature review. The "ARMA Model" combines the advantages of the autoregressive and moving average models, making it one of the most frequently implemented suitable models in static random series research. However, the bulk of time series is, in fact, quasi.
+Dansana et al., (2020) stated that the "ARIMA" model gets around this restriction by using a discretization step. Incorporating both mobile & autoregressive contexts, the suggested technique predicts static and trends in time-series information. In this sense, the researchers examined the "ARIMA" & "ARMA" electric usage designs for domestic usage. Moreover, the information obtained for the different models was done so between 2010 November & 2006 December. The researcher's data revealed that the "ARIMA" model is superior for quarterly & monthly forecasting.
+The ARMA model is probably suitable for regular and weekly forecasting. The development of energy usage may be predicted using the statistical technique of linear regression analysis, which is focused on causal relationships. The researchers carried out further evaluations in the same study. In a different study, the researchers used hourly and daily data, single and multiple linear regression models and other methods to forecast home energy demand. The accuracy of the predictions is significantly impacted by the temporal granularity of the observable information, as the authors have demonstrated.
+An increasing number of machine learning approaches are being used to solve problems with those techniques. Studies have suggested using "Artificial Neural Networks" or ANNs to forecast and optimise power consumption. For instance, a stance tool integrates a multi-layer perceptron as well as a two-layer ANN to swiftly predict how much energy will be used in business and learning institutions. They used the information from the energy analysis of one-hundred and fifty-one public infrastructures in four areas of "South Italy" to determine which of the two ANNs had the best architectural design. The first ANN provided the building's real energy efficiency in its recommended design, while the subsequent ANN assessed the best remodelling options. After receiving a lot of data-rich instruction, they both did well. As per the findings of Yang & Wang (2020), in spite of having a strong learning capacity of the ANN models, they frequently result in issues with under as well as overfitting.  
+The newly developed deep learning technique for forecasting has shown encouraging results in a number of fields. Deep networks have been actively used in recent years to tackle the challenge of predicting energy usage. Abdar et al., (2021) mentioned that a system implements deep learning for predicting the short-term consumption of energy. 
+
+
+
+\newpage
+
+## Conclusion & Recomendations
+
+The Commercial sector is the highest consumer of electrical power within the state of Dubai, specifically the number 221 which is actually known as Jumeriah city, since most of the shops, commercial market are all focused towards this area and second was community number 354 which is Dubai Jebel Ali community since some of the major commercial warehouses are present within Jebel Ali thus it’s the second highest consumer of electrical power, it is seen by the prediction model, it indicates that the commercial is still would be the highest consumer of electrical power and also in the future, previously assumed that the industrial would be the highest, however due to the outcome we can recommend that furthermore 25 kV transformer system would be required in the future and additionally buck-boost converters as some of the bus-bar design within the malls are DC power (underground bus bars) rather than AC to have a unified amperage at first meanwhile then it turns into AC power once it enter the local transformers, more to added some major 531 community power consumer which is Jebel Ali again but the port side as the port side, has some industrial complex’s such as factories, plants and so on, thereby it is recommended to build a new transmission line under the ground rather then overhead, which is actually being built as I’m writing this, which will exchange power among the factors rather line a line connection, basically a spider based connection rather then line based, as it would be more efficient, more to added a little increase within the trend of the ARIMA for 2037 indicates a little raise on the power consumption of the industrial sector since that’s pretty accurate and it match the reality as new factories are being built, one of them is EGA scrap metal melting plant which will be located in that area, additionally the raise of the in the prediction model of ARIMA indicates that new market & malls to be opened in the future, which seems unlikely unfortunately, however if these entertainment zones got trend it can take this effect as it would attack costumers to these location, more to added is that these location are the first tourist zones meaning the power trend should be consistent, however the prediction has some consistency but with some few changes or error at some points like 2028, additionally it is recommended for DEWA to use this prediction for the power changes during the seasonal times of the year, as it is shown during the middle days of the week, the consumption tends to be higher then usual
+
+
+
+
+\newpage
+
+# References
+
+M. Al Kalban, “Dubai Electricity & Water Authority (DEWA): Dewa completes 100 of the short-term goals of its AED 7 billion smart grid strategy, 28-Feb-2022. [Online]. Available: https://www.dewa.gov.ae/en/about-us/media-publications/latest-news/2022/02/dewa-completes-100-of-the-short-term-goals-of-its-aed-7-billion-smart-grid-strategy. [Accessed: 14-Sep-2022]. 
+
+T. L. M. Exchange, “LME aluminium: London Metal Exchange,” Lme, 2022. [Online]. Available: https://www.lme.com/en/Metals/Non-ferrous/LME-Aluminium. [Accessed: 14-Sep-2022]. 
+
+Dawsoon, “Global price of aluminum,” FRED, 24-Aug-2022. [Online]. Available: https://fred.stlouisfed.org/series/PALUMUSDQ. [Accessed: 14-Sep-2022]. 
+H. Ritchie, E. Mathieu, L. Rodés-Guirao, C. Appel, C. Giattino, E. Ortiz-Ospina, J. Hasell, B. Macdonald, D. Beltekian, and M. Roser, “United Arab Emirates: Coronavirus pandemic country profile,” Our World in Data, 05-Mar-2020. [Online]. Available: https://ourworldindata.org/coronavirus/country/united-arab-emirates. [Accessed: 14-Sep-2022]. 
+
+W. I. O. N. W. Team, “UAE residents work on a Friday for the first time; Saturday-Sunday to be weekends,” WION, 08-Jan-2022. [Online]. Available: https://www.wionews.com/world/uae-residents-work-on-a-friday-for-the-first-time-saturday-sunday-to-be-weekends-443126#:~:text=The%20UAE%20government%20had%20announced,set%20to%20follow%20similar%20rules. [Accessed: 14-Sep-2022]. 
+“Arima¶,” ARIMA - sktime documentation. [Online]. Available: https://www.sktime.org/en/v0.8.0/api_reference/auto_generated/sktime.forecasting.arima.ARIMA.html. [Accessed: 14-Sep-2022]. 
+
+“Dubai Electricity & Water Authority: Bill Explanation,” . [Online]. Available: https://www.dewa.gov.ae/en/consumer/billing/understand-bill. [Accessed: 14-Sep-2022]. 
+
+
+M. Pallante, “Time Series Forecasting models,” Medium, 20-Feb-2020. [Online]. Available: https://medium.com/analytics-vidhya/time-series-forecasting-models-726f7968a2c1. [Accessed: 14-Sep-2022]. 
+
+J. Albanna, “Dubai Electricity & Water Authority (DEWA): Shams Dubai,” . [Online]. Available: https://www.dewa.gov.ae/en/consumer/useful-tools/shams-dubai. [Accessed: 14-Sep-2022]. 
+
+
+
+
